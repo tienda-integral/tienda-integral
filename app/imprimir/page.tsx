@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCart, TipoPapel, TamanoHoja } from "@/lib/context/CartContext";
+import { supabase } from "@/lib/supabase";
+
+interface TarifaCopia {
+  id: string;
+  precio: number;
+}
 
 export default function ImprimirPage() {
   const { agregarImpresion } = useCart();
@@ -17,8 +23,40 @@ export default function ImprimirPage() {
   const [anillado, setAnillado] = useState<boolean>(false);
   const [agregadoExitoso, setAgregadoExitoso] = useState<boolean>(false);
 
-  // Precios base estimados
-  const PRECIO_BASE_PAGINA = color === "color" ? 120 : 45;
+  // Precios cargados desde Supabase (con fallback predeterminado)
+  const [tarifas, setTarifas] = useState<Record<string, number>>({
+    a4_bn_simple: 60,
+    a4_bn_doble: 100,
+    a4_color_simple: 200,
+    a4_color_doble: 350,
+    oficio_bn_simple: 80,
+    oficio_bn_doble: 130,
+    oficio_color_simple: 250,
+    anillado_chico: 1500,
+  });
+
+  useEffect(() => {
+    async function obtenerTarifas() {
+      const { data, error } = await supabase
+        .from("configuracion_copias")
+        .select("id, precio");
+
+      if (!error && data) {
+        const mapaTarifas: Record<string, number> = {};
+        data.forEach((item: TarifaCopia) => {
+          mapaTarifas[item.id] = Number(item.precio);
+        });
+        setTarifas((prev) => ({ ...prev, ...mapaTarifas }));
+      }
+    }
+
+    obtenerTarifas();
+  }, []);
+
+  // Determinar precio base según tamaño, color y faz configurados en Supabase
+  const clavePrecio = `${tamanoHoja.toLowerCase() === "oficio" ? "oficio" : "a4"}_${color}_${faz}`;
+  const PRECIO_BASE_PAGINA = tarifas[clavePrecio] ?? (color === "color" ? 200 : 60);
+
   const MULTIPLICADOR_PAPEL =
     tipoPapel === "fotografico"
       ? 2.5
@@ -28,8 +66,10 @@ export default function ImprimirPage() {
       ? 3.0
       : 1.0;
 
+  const precioAnillado = tarifas["anillado_chico"] ?? 1500;
+
   const costoUnitarioPorCopia = Math.round(
-    paginas * PRECIO_BASE_PAGINA * MULTIPLICADOR_PAPEL + (anillado ? 1500 : 0)
+    paginas * PRECIO_BASE_PAGINA * MULTIPLICADOR_PAPEL + (anillado ? precioAnillado : 0)
   );
   const totalEstimado = costoUnitarioPorCopia * copias;
 
@@ -248,7 +288,7 @@ export default function ImprimirPage() {
                 className="w-4 h-4 accent-teal-600 rounded"
               />
               <span className="text-xs font-bold text-stone-800">
-                Sumar anillado plástico con tapas transparente y negra (+$1.500)
+                Sumar anillado plástico con tapas transparente y negra (+${precioAnillado.toLocaleString("es-AR")})
               </span>
             </label>
           </div>
