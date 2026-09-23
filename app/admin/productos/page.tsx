@@ -223,6 +223,12 @@ export default function AdminProductosPage() {
             >
               <span>+</span> Nuevo
             </Link>
+            <Link
+              href="/tienda/copiado"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5"
+            >
+              📄 Tarifas de Copias
+            </Link>
 
             <Link
               href="/tienda"

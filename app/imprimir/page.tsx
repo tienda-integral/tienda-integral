@@ -23,14 +23,14 @@ export default function ImprimirPage() {
   const [anillado, setAnillado] = useState<boolean>(false);
   const [agregadoExitoso, setAgregadoExitoso] = useState<boolean>(false);
 
-  // Precios cargados desde Supabase (con fallback predeterminado)
+  // Tarifas dinámicas desde Supabase
   const [tarifas, setTarifas] = useState<Record<string, number>>({
-    a4_bn_simple: 60,
-    a4_bn_doble: 100,
+    a4_byn_simple: 60,
+    a4_byn_doble: 100,
     a4_color_simple: 200,
     a4_color_doble: 350,
-    oficio_bn_simple: 80,
-    oficio_bn_doble: 130,
+    oficio_byn_simple: 80,
+    oficio_byn_doble: 130,
     oficio_color_simple: 250,
     anillado_chico: 1500,
   });
@@ -53,8 +53,9 @@ export default function ImprimirPage() {
     obtenerTarifas();
   }, []);
 
-  // Determinar precio base según tamaño, color y faz configurados en Supabase
-  const clavePrecio = `${tamanoHoja.toLowerCase() === "oficio" ? "oficio" : "a4"}_${color}_${faz}`;
+  // Clave de precio según opciones
+  const prefijoTamano = tamanoHoja.toLowerCase() === "oficio" ? "oficio" : "a4";
+  const clavePrecio = `${prefijoTamano}_${color}_${faz}`;
   const PRECIO_BASE_PAGINA = tarifas[clavePrecio] ?? (color === "color" ? 200 : 60);
 
   const MULTIPLICADOR_PAPEL =
@@ -79,11 +80,15 @@ export default function ImprimirPage() {
     }
   };
 
+  const handleQuitarArchivo = () => {
+    setArchivo(null);
+  };
+
   const handleAgregarAlCarrito = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!archivo) {
-      alert("Por favor selecciona o sube un archivo (PDF o Imagen).");
+      alert("Por favor subí primero un archivo para continuar.");
       return;
     }
 
@@ -107,6 +112,7 @@ export default function ImprimirPage() {
   return (
     <main className="min-h-screen bg-[#FAF9F6] py-10 px-4 text-stone-800 font-sans">
       <div className="max-w-3xl mx-auto">
+        {/* Cabecera */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
@@ -140,175 +146,235 @@ export default function ImprimirPage() {
           onSubmit={handleAgregarAlCarrito}
           className="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200 shadow-sm space-y-6"
         >
-          {/* Subida de archivo */}
+          {/* PASO 1: CARGA OBLIGATORIA DEL ARCHIVO */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
-              1. Selecciona tu archivo (PDF, DOCX, JPG, PNG)
-            </label>
-            <input
-              type="file"
-              required
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={handleArchivoChange}
-              className="w-full text-xs text-stone-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-stone-100 file:text-stone-800 hover:file:bg-stone-200 cursor-pointer border border-stone-200 rounded-2xl p-2"
-            />
-            {archivo && (
-              <p className="mt-2 text-xs text-teal-600 font-medium">
-                Archivo seleccionado: <strong>{archivo.name}</strong> ({(archivo.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-black uppercase tracking-wider text-stone-800 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px]">
+                  1
+                </span>
+                Subí tu archivo obligatorio (PDF, DOCX, JPG, PNG)
+              </label>
+              {archivo && (
+                <button
+                  type="button"
+                  onClick={handleQuitarArchivo}
+                  className="text-xs text-rose-600 font-bold hover:underline"
+                >
+                  Cambiar archivo
+                </button>
+              )}
+            </div>
+
+            {!archivo ? (
+              <label className="border-2 border-dashed border-teal-300 hover:border-teal-500 bg-teal-50/40 hover:bg-teal-50/70 transition-all rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer text-center group">
+                <div className="w-14 h-14 rounded-2xl bg-teal-100 group-hover:scale-110 transition-transform flex items-center justify-center text-2xl mb-3 text-teal-700">
+                  📁
+                </div>
+                <span className="text-sm font-bold text-stone-800 mb-1">
+                  Hacé clic acá para seleccionar tu archivo
+                </span>
+                <span className="text-xs text-stone-500">
+                  Soporta documentos PDF, Word o fotos (JPG, PNG)
+                </span>
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={handleArchivoChange}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <div className="p-4 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📄</span>
+                  <div>
+                    <p className="text-xs font-bold text-stone-900 line-clamp-1">
+                      {archivo.name}
+                    </p>
+                    <p className="text-[11px] text-teal-700 font-medium">
+                      {(archivo.size / 1024 / 1024).toFixed(2)} MB • Archivo listo para configurar
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">
+                  ✓ Cargado
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Configuración */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-4 border-t border-stone-100">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                Tamaño de Hoja
-              </label>
-              <select
-                value={tamanoHoja}
-                onChange={(e) => setTamanoHoja(e.target.value as TamanoHoja)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-semibold bg-white"
-              >
-                <option value="A4">A4 (Estándar)</option>
-                <option value="Oficio">Oficio / Legal</option>
-                <option value="A3">A3 (Doble carta)</option>
-              </select>
+          {/* PASO 2: OPCIONES (BLOQUEADAS HASTA QUE HAYA ARCHIVO) */}
+          {!archivo ? (
+            <div className="py-10 text-center border-t border-dashed border-stone-200 text-stone-400">
+              <span className="text-3xl block mb-2 opacity-50">🔒</span>
+              <p className="text-xs font-bold uppercase tracking-wider">
+                Subí tu archivo en el paso 1 para desbloquear las opciones de copiado y cotización
+              </p>
             </div>
+          ) : (
+            <div className="space-y-6 pt-4 border-t border-stone-200 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-stone-800 text-white flex items-center justify-center text-[10px] font-bold">
+                  2
+                </span>
+                <h3 className="text-xs font-black uppercase tracking-wider text-stone-800">
+                  Elegí las opciones de impresión
+                </h3>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                Tipo de Papel
-              </label>
-              <select
-                value={tipoPapel}
-                onChange={(e) => setTipoPapel(e.target.value as TipoPapel)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-semibold bg-white"
-              >
-                <option value="comun">Común obra 75/80g</option>
-                <option value="autoadhesivo">Papel Autoadhesivo / Sticker</option>
-                <option value="fotografico">Papel Fotográfico Brillante</option>
-                <option value="foto_autoadhesivo">Fotográfico Autoadhesivo</option>
-              </select>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Tamaño de Hoja
+                  </label>
+                  <select
+                    value={tamanoHoja}
+                    onChange={(e) => setTamanoHoja(e.target.value as TamanoHoja)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-semibold bg-white"
+                  >
+                    <option value="A4">A4 (Estándar)</option>
+                    <option value="Oficio">Oficio / Legal</option>
+                    <option value="A3">A3 (Doble carta)</option>
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                Color de Impresión
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Tipo de Papel
+                  </label>
+                  <select
+                    value={tipoPapel}
+                    onChange={(e) => setTipoPapel(e.target.value as TipoPapel)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-semibold bg-white"
+                  >
+                    <option value="comun">Común obra 75/80g</option>
+                    <option value="autoadhesivo">Papel Autoadhesivo / Sticker</option>
+                    <option value="fotografico">Papel Fotográfico Brillante</option>
+                    <option value="foto_autoadhesivo">Fotográfico Autoadhesivo</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Color de Impresión
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setColor("byn")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        color === "byn"
+                          ? "border-teal-500 bg-teal-50 text-teal-800 shadow-sm"
+                          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                      }`}
+                    >
+                      Blanco y Negro
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setColor("color")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        color === "color"
+                          ? "border-teal-500 bg-teal-50 text-teal-800 shadow-sm"
+                          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                      }`}
+                    >
+                      Color
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Faz
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFaz("simple")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        faz === "simple"
+                          ? "border-teal-500 bg-teal-50 text-teal-800 shadow-sm"
+                          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                      }`}
+                    >
+                      Simple Faz
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFaz("doble")}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        faz === "doble"
+                          ? "border-teal-500 bg-teal-50 text-teal-800 shadow-sm"
+                          : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                      }`}
+                    >
+                      Doble Faz
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Cantidad de Páginas del archivo
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={paginas}
+                    onChange={(e) => setPaginas(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3.5 py-2 rounded-xl border border-stone-200 text-xs font-bold text-stone-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Juegos / Copias
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={copias}
+                    onChange={(e) => setCopias(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3.5 py-2 rounded-xl border border-stone-200 text-xs font-bold text-stone-800"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-center gap-3 cursor-pointer p-3 border border-stone-200 rounded-2xl hover:bg-stone-50">
+                  <input
+                    type="checkbox"
+                    checked={anillado}
+                    onChange={(e) => setAnillado(e.target.checked)}
+                    className="w-4 h-4 accent-teal-600 rounded"
+                  />
+                  <span className="text-xs font-bold text-stone-800">
+                    Sumar anillado plástico con tapas transparente y negra (+${precioAnillado.toLocaleString("es-AR")})
+                  </span>
+                </label>
+              </div>
+
+              {/* Subtotal y Botón de envío */}
+              <div className="pt-5 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] text-stone-500 block font-semibold">Total Estimado:</span>
+                  <span className="text-3xl font-black text-teal-600">
+                    ${totalEstimado.toLocaleString("es-AR")}
+                  </span>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => setColor("byn")}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold ${
-                    color === "byn"
-                      ? "border-teal-500 bg-teal-50 text-teal-800"
-                      : "border-stone-200 bg-white text-stone-600"
-                  }`}
+                  type="submit"
+                  className="py-3 px-6 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-2xl shadow-sm transition-all active:scale-95"
                 >
-                  Blanco y Negro
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setColor("color")}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold ${
-                    color === "color"
-                      ? "border-teal-500 bg-teal-50 text-teal-800"
-                      : "border-stone-200 bg-white text-stone-600"
-                  }`}
-                >
-                  Color
+                  + Agregar al Carrito
                 </button>
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                Faz
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFaz("simple")}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold ${
-                    faz === "simple"
-                      ? "border-teal-500 bg-teal-50 text-teal-800"
-                      : "border-stone-200 bg-white text-stone-600"
-                  }`}
-                >
-                  Simple Faz
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFaz("doble")}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold ${
-                    faz === "doble"
-                      ? "border-teal-500 bg-teal-50 text-teal-800"
-                      : "border-stone-200 bg-white text-stone-600"
-                  }`}
-                >
-                  Doble Faz
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                Cantidad de Páginas del archivo
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={paginas}
-                onChange={(e) => setPaginas(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                Juegos / Copias
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={copias}
-                onChange={(e) => setCopias(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <label className="flex items-center gap-3 cursor-pointer p-3 border border-stone-200 rounded-2xl hover:bg-stone-50">
-              <input
-                type="checkbox"
-                checked={anillado}
-                onChange={(e) => setAnillado(e.target.checked)}
-                className="w-4 h-4 accent-teal-600 rounded"
-              />
-              <span className="text-xs font-bold text-stone-800">
-                Sumar anillado plástico con tapas transparente y negra (+${precioAnillado.toLocaleString("es-AR")})
-              </span>
-            </label>
-          </div>
-
-          {/* Subtotal y Botón */}
-          <div className="pt-5 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[11px] text-stone-500 block">Total Estimado:</span>
-              <span className="text-2xl font-black text-teal-600">
-                ${totalEstimado.toLocaleString("es-AR")}
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              className="py-3 px-6 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-2xl shadow-sm transition-all active:scale-95"
-            >
-              + Agregar al Carrito
-            </button>
-          </div>
+          )}
         </form>
       </div>
     </main>
