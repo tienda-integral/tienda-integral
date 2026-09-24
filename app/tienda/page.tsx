@@ -5,15 +5,18 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 interface Producto {
-  id: number;
+  id: number | string;
   nombre: string;
-  precio: number;
+  precio?: number;
+  precio_venta?: number;
   categoria?: string;
   rubro?: string;
   subcategoria?: string;
   imagen_url?: string;
   existencia?: number;
+  stock?: number;
   en_oferta?: boolean;
+  es_oferta?: boolean;
   texto_oferta?: string;
   color_oferta?: string;
 }
@@ -62,7 +65,8 @@ export default function TiendaPage() {
     const cat = (prod.categoria || prod.rubro || "").toLowerCase();
     const coincideCat =
       categoriaActiva === "Todos" || cat.includes(categoriaActiva.toLowerCase());
-    const coincideOferta = !soloOfertas || Boolean(prod.en_oferta);
+    const tieneOferta = prod.en_oferta || prod.es_oferta;
+    const coincideOferta = !soloOfertas || Boolean(tieneOferta);
     return coincideTexto && coincideCat && coincideOferta;
   });
 
@@ -198,7 +202,7 @@ export default function TiendaPage() {
             </div>
           </div>
 
-          {/* Pastilla Escuelas e Instituciones (Enlaza a /institucional con tu teléfono exclusivo) */}
+          {/* Pastilla Escuelas e Instituciones */}
           <div className="bg-amber-400 rounded-2xl p-4 text-slate-950 shadow-xs flex items-center justify-between gap-3">
             <div>
               <span className="bg-black/10 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -252,7 +256,9 @@ export default function TiendaPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {productosFiltrados.map((prod) => {
               const badgeStyle = ESTILOS_BADGE[prod.color_oferta || "rojo"] || ESTILOS_BADGE.rojo;
-              const cuota3 = Math.round((prod.precio || 0) / 3);
+              const precioFinal = Number(prod.precio ?? prod.precio_venta ?? 0);
+              const cuota3 = Math.round(precioFinal / 3);
+              const estaEnOferta = Boolean(prod.en_oferta || prod.es_oferta);
 
               return (
                 <div
@@ -260,7 +266,7 @@ export default function TiendaPage() {
                   className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col justify-between group"
                 >
                   <div className="relative">
-                    {prod.en_oferta && (
+                    {estaEnOferta && (
                       <span
                         style={{ background: badgeStyle.bg, color: badgeStyle.color }}
                         className="absolute top-2 right-2 text-[9px] font-black px-2 py-0.5 rounded shadow-xs z-10 uppercase tracking-wider"
@@ -296,7 +302,7 @@ export default function TiendaPage() {
 
                       <div className="mt-2">
                         <span className="text-base font-black text-slate-950 block leading-none">
-                          ${prod.precio?.toLocaleString("es-AR")}
+                          ${precioFinal.toLocaleString("es-AR")}
                         </span>
                         
                         <span className="text-[10px] font-semibold text-emerald-600 block mt-0.5">
@@ -309,7 +315,7 @@ export default function TiendaPage() {
                   <div className="p-3 pt-0">
                     <a
                       href={`https://wa.me/?text=${encodeURIComponent(
-                        `¡Hola Maktub! Me interesa comprar: ${prod.nombre} ($${prod.precio?.toLocaleString("es-AR")})`
+                        `¡Hola Maktub! Me interesa comprar: ${prod.nombre} ($${precioFinal.toLocaleString("es-AR")})`
                       )}`}
                       target="_blank"
                       rel="noreferrer"
